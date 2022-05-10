@@ -9,6 +9,9 @@ import {AppBar, Toolbar, Button, Typography, Snackbar, Alert, TextField, RadioGr
 import {DataGrid} from '@mui/x-data-grid';
 import {Line} from 'react-chartjs-2';
 import {Chart, registerables } from 'chart.js'; 
+import DatePicker from "@mui/lab/DatePicker";
+import AdapterDateFns from '@mui/lab/AdapterDateFns';
+import LocalizationProvider from '@mui/lab/LocalizationProvider';
 var SERVER_URL = "http://127.0.0.1:5000";
 
 function App() {
@@ -28,6 +31,18 @@ function App() {
 
     let [usdUserWallet, setUsdUserWallet] = useState(0);
     let [lbpUserWallet, setLbpUserWallet] = useState(0);
+
+    let [compareSellAmount, setCompareSellAmount] = useState(0);
+    let [compareSellAmount2, setCompareSellAmount2] = useState(0);
+    let [compareTransactionType, setCompareTransactionType] = useState("lbp");
+    let [compareDate1, setCompareDate1] = useState(new Date());
+    let [compareDate2, setCompareDate2] = useState(new Date());
+    let [compareMessageLoss1, setCompareMessageLoss1] = useState(false);
+    let [compareMessageProfit1, setCompareMessageProfit1] = useState(false);
+    let [compareMessageLoss2, setCompareMessageLoss2] = useState(false);
+    let [compareMessageProfit2, setCompareMessageProfit2] = useState(false);
+    let [compareResult1, setCompareResult1] = useState(0);
+    let [compareResult2, setCompareResult2] = useState(0);
 
     const States = {
         PENDING: "PENDING",
@@ -273,6 +288,81 @@ function App() {
             .then((response) => login(username, password));
     }
 
+    function compare1(){
+        var date = compareDate1.getFullYear().toString() + "-" + (compareDate1.getMonth()+1).toString() + "-" + compareDate1.getDate().toString()
+        var body = {
+            "usd_to_lbp": true,
+            "date_to_compare": date,
+            "dollarstobuy": 0,
+            "value": Number(compareSellAmount)
+        }
+        fetch(`${SERVER_URL}/insight`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body),
+                }
+            )
+            .then(response => response.json())
+            .then(data => {
+                    if (data["loss"]){
+                        setCompareMessageLoss1(true);
+                        setCompareMessageProfit1(false);
+                    }
+                    else{
+                        setCompareMessageLoss1(false);
+                        setCompareMessageProfit1(true);
+                    }
+                    setCompareResult1(data["value"]);
+                }
+            );
+    }
+
+    function compare2(){
+        var date = compareDate2.getFullYear().toString() + "-" + (compareDate2.getMonth()+1).toString() + "-" + compareDate2.getDate().toString()
+        var body;
+        if (compareTransactionType=="lbp"){
+            body = {
+                "usd_to_lbp": false,
+                "date_to_compare": date,
+                "dollarstobuy": 0,
+                "value": Number(compareSellAmount2)
+            }
+        }
+        else{
+            body = {
+                "usd_to_lbp": false,
+                "date_to_compare": date,
+                "dollarstobuy": Number(compareSellAmount2),
+                "value": 0
+            }
+        }
+        fetch(`${SERVER_URL}/insight`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body),
+                }
+            )
+            .then(response => response.json())
+            .then(data => {
+                if (data["loss"]){
+                    setCompareMessageLoss2(true);
+                    setCompareMessageProfit2(false);
+                }
+                else{
+                    setCompareMessageLoss2(false);
+                    setCompareMessageProfit2(true);
+                }
+                setCompareResult2(data["value"]);
+                }
+            );
+    }
+
     function logout(){
         setUserToken(null);
         clearUserToken()
@@ -353,6 +443,77 @@ function App() {
             } ref={graph}/>
             {getChartData()}
         </div>
+        <div className='wrapper'>
+            <Typography variant="h5" style={{textAlign: "center"}}>Compare</Typography>
+            <Typography variant="h6">Enter a date and value to find out how much you would have gained/lost</Typography>
+            <Typography variant="h6">If you had placed your transaction on your select date</Typography>
+            <form name="transaction-entry">
+                <div className="form-item">
+                    <TextField fullWidth label="Amoun To Sell" id="sell-amount" type="number" value={compareSellAmount} 
+                        onChange={e => setCompareSellAmount(e.target.value)}
+                    />
+                </div>
+                <div className="form-item">
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DatePicker
+                            value={compareDate1}
+                            onChange={date => setCompareDate1(date)}
+                            format="yyyy/MM/dd"
+                            renderInput={(params) => <TextField {...params} />}
+                        />
+                    </LocalizationProvider>
+                </div>
+                {compareMessageProfit1 && (
+                    <Typography variant="h6">You would have gained {compareResult1}</Typography>
+                )}
+                {compareMessageLoss1 && (
+                    <Typography variant="h6">You would have lost {compareResult1}</Typography>
+                )}
+                <div className="form-item">
+                    <Button color="primary" variant="contained" id="compare-button-1" onClick={compare1}>
+                        Compare
+                    </Button>
+                </div>
+            </form>
+            <Typography variant="h6">Enter dollars bought to see the LBP lost/gained</Typography>
+            <Typography variant="h6">OR enter LBP spent to see the dollars or USD you would have gained/lost at your chosen date</Typography>
+            <form name="transaction-entry">
+                <div className="form-item">
+                    <TextField fullWidth label="Amoun To Sell" id="sell-amount-2" type="number" value={compareSellAmount2} 
+                        onChange={e => setCompareSellAmount2(e.target.value)}
+                    />
+                </div>
+                <div className="form-item">
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DatePicker
+                            value={compareDate2}
+                            onChange={date => setCompareDate2(date)}
+                            format="yyyy/MM/dd"
+                            renderInput={(params) => <TextField {...params} />}
+                        />
+                    </LocalizationProvider>
+                </div>
+                <div className="form-item">
+                    <div className="radio-group">
+                        <RadioGroup value={compareTransactionType} onChange={(_, value) => setCompareTransactionType(value)}>
+                            <FormControlLabel value="lbp" control={<Radio />} label="LBP Spent"/>
+                            <FormControlLabel value="usd" control={<Radio />} label="Dollars Bought"/>
+                        </RadioGroup>
+                    </div>
+                </div>
+                {compareMessageProfit2 && (
+                    <Typography variant="h6">You would have gained {compareResult2}</Typography>
+                )}
+                {compareMessageLoss2 && (
+                    <Typography variant="h6">You would have lost {compareResult2}</Typography>
+                )}
+                <div className="form-item">
+                    <Button color="primary" variant="contained" id="compare-button-2" onClick={compare2}>
+                        Compare
+                    </Button>
+                </div>
+            </form>
+        </div>
         <div className="wrapper">
             <Typography variant="h5">Record a recent transaction</Typography>
             <form name="transaction-entry">
@@ -366,13 +527,17 @@ function App() {
                         onChange={e => setUsdInput(e.target.value)}
                     />
                 </div>
-                <Select id="transaction-type" value={transactionType} onChange={e => setTransactionType(e.target.value)}>
-                    <MenuItem value="usd-to-lbp">USD to LBP</MenuItem>
-                    <MenuItem value="lbp-to-usd">LBP to USD</MenuItem>
-                </Select>
-                <Button color="primary" variant="contained" id="add-button" onClick={addItem}>
-                    Add
-                </Button>
+                <div className="form-item">
+                    <Select id="transaction-type" value={transactionType} onChange={e => setTransactionType(e.target.value)}>
+                        <MenuItem value="usd-to-lbp">USD to LBP</MenuItem>
+                        <MenuItem value="lbp-to-usd">LBP to USD</MenuItem>
+                    </Select>
+                </div>
+                <div className="form-item">
+                    <Button color="primary" variant="contained" id="add-button" onClick={addItem}>
+                        Add
+                    </Button>
+                </div>
             </form>
         </div>
         {userToken && (

@@ -53,13 +53,12 @@ export default function AddFundsDialog({open, onSubmit, onClose, userToken}) {
     }, [userToken]);
 
     function deleteRequest(request_id){
-        fetch(`${SERVER_URL}/request`,
+        fetch(`${SERVER_URL}/request?id=${request_id}`,
                 {
                     method: 'DELETE',
                     headers: {
                         "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({"id": request_id}),
+                    }
                 }
             )
             .then(response => response.json())
